@@ -19,7 +19,7 @@ def convert_uv_to_vdir(u, v):
     return speed, direction_degrees, sin_value, cos_value
 
 
-def get_site_horizon_result(args, file_path):
+def get_site_horizon_result(args,file_path):
     print(args.result_save_path)
 
     df = pd.read_csv(args.result_save_path)
@@ -126,34 +126,33 @@ def generate_result_csv(args):
     if not os.path.exists(file_path):
         get_site_horizon_result(args, file_path=file_path)
 
-
-def generate_correlation_csv(args, pred_path):
+def generate_correlation_csv(args,pred_path):
 
     df = pd.read_csv(pred_path)
     T_hr = int(args.T_hr)
     L_hr = int(args.L_hr)
 
     stations3m = pd.read_csv(args.station3m_coord_ix)
-    df["time"] = pd.to_datetime(df["time"], errors="coerce")
-    df["time_delta"] = pd.to_datetime(df["time_delta"], errors="coerce")
+    df["time"] = pd.to_datetime(df["time"],errors='coerce')
+    df["time_delta"] = pd.to_datetime(df["time_delta"],errors='coerce')
 
     sites = stations3m["name"]
     results = pd.DataFrame()
     for site in sites:
-        print("collect result for", site)
+        print('collect result for',site)
         result = pd.DataFrame()
-        (hrlist, r_u_list, r_v_list, ecmwf_r_u_list, ecmwf_r_v_list) = (
-            [],
-            [],
-            [],
-            [],
-            [],
-        )
+        (
+            hrlist,
+            r_u_list,
+            r_v_list,
+            ecmwf_r_u_list,
+            ecmwf_r_v_list
+        ) = ([], [], [], [], [])
         df_site = df[df["site"] == site]
         horizon_zero = (
-            df_site["time"]
-            + pd.to_timedelta(T_hr, unit="h")
-            - pd.to_timedelta(L_hr, unit="h")
+                df_site["time"]
+                + pd.to_timedelta(T_hr, unit="h")
+                - pd.to_timedelta(L_hr, unit="h")
         )
         df_site = df_site[df_site["time_delta"] >= horizon_zero]
         df_site["horizon"] = df_site["time_delta"] - horizon_zero
@@ -163,10 +162,10 @@ def generate_correlation_csv(args, pred_path):
             hrlist.append(horizon)
             df_site_hr = df_site[df_site["horizon"] == horizon]
             df_site_hr = df_site_hr.dropna()
-            r_u = df_site_hr["label3m_u"].corr(df_site_hr["pred_u"])
-            r_v = df_site_hr["label3m_v"].corr(df_site_hr["pred_v"])
-            ecmwf_u = df_site_hr["label3m_u"].corr(df_site_hr["ecmwf_u"])
-            ecmwf_v = df_site_hr["label3m_v"].corr(df_site_hr["ecmwf_v"])
+            r_u = df_site_hr['label3m_u'].corr(df_site_hr['pred_u'])
+            r_v = df_site_hr['label3m_v'].corr(df_site_hr['pred_v'])
+            ecmwf_u = df_site_hr['label3m_u'].corr(df_site_hr['ecmwf_u'])
+            ecmwf_v = df_site_hr['label3m_v'].corr(df_site_hr['ecmwf_v'])
 
             r_u_list.append(r_u)
             r_v_list.append(r_v)

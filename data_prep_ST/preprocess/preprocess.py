@@ -8,24 +8,22 @@ from data_prep_ST.preprocess.interpolation_model import Interpolation_model_grid
 from colorama import init, Fore, Style
 import rasterio
 
-
-def dpird_correct(site_name, site_data):
-    site_data["time"] = pd.to_datetime(site_data["time"])
+def dpird_correct(site_name,site_data):
+    site_data['time'] = pd.to_datetime(site_data['time'])
     if site_name == "Pemberton":
         site_data["wind_3m_degN"] = (site_data["wind_3m_degN"] + 90) % 360
-    if site_name == "DFES-I Portable":
-        site_data["wind_3m_speed"] = np.nan
-        site_data["wind_3m_degN"] = np.nan
-    if site_name == "DBCA-B Portable":
-        site_data["wind_3m_speed"] = np.nan
-        site_data["wind_3m_degN"] = np.nan
-    if site_name == "Scaddan":
-        invalid_since = pd.to_datetime("2024-2-6 06:45:00")
-        site_data.loc[site_data["time"] >= invalid_since, "wind_3m_speed"] = np.nan
+    if site_name == 'DFES-I Portable':
+        site_data['wind_3m_speed'] = np.nan
+        site_data['wind_3m_degN'] = np.nan
+    if site_name =='DBCA-B Portable':
+        site_data['wind_3m_speed'] = np.nan
+        site_data['wind_3m_degN'] = np.nan
+    if site_name == 'Scaddan':
+        invalid_since = pd.to_datetime('2024-2-6 06:45:00')
+        site_data.loc[site_data['time']>= invalid_since,'wind_3m_speed'] = np.nan
     # if site_name == 'Glen Eagle':
     #     site_data["wind_speed"] = np.nan
     return site_data
-
 
 def form_dpird_dataset(
     dataset_path,
@@ -88,7 +86,7 @@ def form_dpird_dataset(
         site_data_path = os.path.join(dataset_path, name + ".csv")
         if os.path.exists(site_data_path):
             site_data = pd.read_csv(site_data_path)
-            site_data = dpird_correct(row_i["name"], site_data)
+            site_data = dpird_correct(row_i['name'],site_data)
         else:
             continue
         site_data["time"] = pd.to_datetime(site_data["time"])
@@ -178,7 +176,7 @@ def create_label_grid(
         site_data_path = os.path.join(dataset_path, name + ".csv")
         if os.path.exists(site_data_path):
             site_data = pd.read_csv(site_data_path)
-            site_data = dpird_correct(row_i["name"], site_data)
+            site_data = dpird_correct(row_i['name'],site_data)
         else:
             continue
         site_data["time"] = pd.to_datetime(site_data["time"])
@@ -267,7 +265,7 @@ def create_label3m_grid(
         site_data_path = os.path.join(dataset_path, name + ".csv")
         if os.path.exists(site_data_path):
             site_data = pd.read_csv(site_data_path)
-            site_data = dpird_correct(row_i["name"], site_data)
+            site_data = dpird_correct(row_i['name'],site_data)
         else:
             continue
         site_data["time"] = pd.to_datetime(site_data["time"])
@@ -399,14 +397,13 @@ def create_label_ix(star_coord_path, ds: xr.Dataset, args):
     star_coords["lon_ix"] = lons_ix
     return star_coords
 
-
 def create_label3m_ix(station3m_coord_path, ds: xr.Dataset, args):
     lats_ix, lons_ix = [], []
     station_coords = pd.read_csv(station3m_coord_path)
     station3m_coords = station_coords.copy()
     for ix, row_i in station_coords.iterrows():
         if (args.lat_min <= row_i["lat"] <= args.lat_max) and (
-            args.lon_min <= row_i["lon"] <= args.lon_max
+                args.lon_min <= row_i["lon"] <= args.lon_max
         ):
             nearest_latitude = ds["latitude"].sel(
                 latitude=row_i["lat"], method="nearest"

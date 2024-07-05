@@ -14,7 +14,7 @@ from metrics_outfile import out_site
 from utils.earlystop import EarlyStopping
 import matplotlib.pyplot as plt
 import mlflow.pytorch
-from metrics_outfile.collect_result import generate_result_csv, generate_correlation_csv
+from metrics_outfile.collect_result import generate_result_csv,generate_correlation_csv
 
 
 class Exp(object):
@@ -58,8 +58,7 @@ class Exp(object):
                 f"ix{self.args.grid_ix}_{-self.args.lat_min}_"
                 f"{-self.args.lat_max}_{self.args.lon_min}_"
                 f"{self.args.lon_max}_{len(self.args.vars_cds + self.args.vars_dpird)}"
-                f"feat_2022_2023_loss{len(self.args.labels)}"
-            )
+                f"feat_2022_2023_loss{len(self.args.labels)}")
         self.args.cds_dest_path = os.path.join(
             self.args.st_data_path, "cds_" + self.args.filename + ".nc"
         )
@@ -92,13 +91,13 @@ class Exp(object):
             self.args.result_path, self.args.filename + "_predstar.csv"
         )
         self.args.result3m_save_path = os.path.join(
-            self.args.result_path,
-            f'{self.args.filename}_predst_{self.args.test_grid_start.replace("-", "_")}'
-            f'_{self.args.test_grid_end.replace("-", "_")}_predstation3m.csv',
+            self.args.result_path, f"{self.args.filename}_predst_{self.args.test_grid_start.replace('-', '_').replace('.', '_')}"
+                                   f"_{self.args.test_grid_end.replace('-', '_').replace('.', '_')}_predstation3m.csv"
         )
         self.args.ds_save_path = os.path.join(
             self.args.result_path,
-            f'{self.args.filename}_predst_{self.args.test_grid_start.replace("-", "_")}_{self.args.test_grid_end.replace("-", "_")}_ds.nc',
+            f"{self.args.filename}_predst_{self.args.test_grid_start.replace('-', '_').replace('.', '_')}"
+            f"_{self.args.test_grid_end.replace('-', '_').replace('.', '_')}_ds.nc",
         )
 
         self.args.model_save_path = os.path.join(
@@ -107,10 +106,8 @@ class Exp(object):
         self.args.star_coord_ix = os.path.join(
             self.args.result_path, f"star_loc_{self.args.filename}.csv"
         )
-        self.args.station3m_coord_ix = os.path.join(
-            self.args.result_path, f"station3m_loc_{self.args.filename}.csv"
-        )
-        #
+        self.args.station3m_coord_ix = os.path.join(self.args.result_path,f"station3m_loc_{self.args.filename}.csv")
+
         if not os.path.exists(self.args.result_path):
             raise ValueError(f"Please mk directory {self.args.result_path}")
         if not os.path.exists(self.args.model_path):
@@ -215,7 +212,8 @@ class Exp(object):
             filters=self.args.filters,
         )
         if "wind_3m_u" in self.args.labels:
-            criterion = MSE_10_3_point().to(self.device)
+            terrain = torch.tensor(xr.open_dataset(self.args.test_noscale_path)["terrain"][0].data,dtype=torch.float32).to(self.device)
+            criterion = MSE_10_3_point(terrain).to(self.device)
         else:
             criterion = MSE_point().to(self.device)
         optimizer = optim.Adam(model.parameters(), lr=self.args.learning_rate)
@@ -316,7 +314,7 @@ class Exp(object):
         ) as pbar:
             df = pd.DataFrame()
 
-            for i, (x, y, time, x_ecmwf, _) in enumerate(test_dataloader):
+            for i, (x, y, y_time, _) in enumerate(test_dataloader):
                 x = x.to(self.rank) if self.args.distributed else x.to(self.device)
                 yhat = model(x.float())
                 out = (
@@ -329,10 +327,9 @@ class Exp(object):
                 y = y.cpu().numpy()
                 out = out.cpu().numpy()
 
-                time = time.numpy()
-                x_ecmwf = x_ecmwf.cpu().numpy()
+                y_time = y_time.numpy()
 
-                out_df = out_site.out_per_df(self.args, out, y, time, x_ecmwf)
+                out_df = out_site.out_per_df(self.args, out, y, y_time)
                 df = pd.concat([df, out_df])
                 pbar.update(1)  # Increment the progress bar
 
@@ -368,7 +365,7 @@ class Exp(object):
         ) as pbar:
             ds = []
             df = pd.DataFrame()
-            for i, (x, y, ytime, x_ecmwf, y3m) in enumerate(test_dataloader):
+            for i, (x, y, ytime, y3m) in enumerate(test_dataloader):
                 x = x.to(self.rank) if self.args.distributed else x.to(self.device)
                 yhat = model(x.float())
                 out = (
@@ -381,13 +378,13 @@ class Exp(object):
                 y = y.cpu().numpy()
                 out = out.cpu().numpy()
                 ytime = ytime.numpy()
-                x_ecmwf = x_ecmwf.cpu().numpy()
+
                 y3m = y3m.cpu().numpy()
 
-                out_ds = out_site.out_ds(self.args, out, y, ytime, x_ecmwf)
+                out_ds = out_site.out_ds(self.args, out, y, ytime)
                 ds.append(out_ds)
 
-                out_df = out_site.out_per3m_df(self.args, out, y, ytime, x_ecmwf, y3m)
+                out_df = out_site.out_per3m_df(self.args, out, y, ytime,y3m)
                 df = pd.concat([df, out_df])
 
                 pbar.update(1)  # Increment the progress bar
@@ -400,7 +397,7 @@ class Exp(object):
             pbar.update(1)
         combined_ds.to_netcdf(self.args.ds_save_path)
         df.to_csv(self.args.result3m_save_path, index=False)
-        generate_correlation_csv(self.args, pred_path=self.args.result3m_save_path)
+        generate_correlation_csv(self.args,pred_path=self.args.result3m_save_path)
 
         mem_used_test = psutil.Process().memory_info().rss / 1024 / 1024
         end_time = time.time()

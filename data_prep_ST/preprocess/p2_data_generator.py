@@ -219,7 +219,9 @@ class STDataset(Dataset):
 
         self.ds = xr.open_dataset(ds_path)
         self.ds_y = xr.open_dataset(self.args.label_dest_path)
-        self.ds_y3m = xr.open_dataset(self.args.label3m_dest_path)
+        self.ds_y3m = (
+            xr.open_dataset(self.args.label3m_dest_path)
+        )
 
         if self.flag == "test_grid":
             self.ds = self.ds.sel(
@@ -229,14 +231,18 @@ class STDataset(Dataset):
                 time=slice(self.args.test_grid_start, self.args.test_grid_end)
             )
 
-            self.ds_y3m = self.ds_y3m.sel(
-                time=slice(self.args.test_grid_start, self.args.test_grid_end)
+            self.ds_y3m = (
+                self.ds_y3m.sel(
+                    time=slice(self.args.test_grid_start, self.args.test_grid_end)
+                )
             )
 
         if self.args.customise_grid:
             self.ds_y = self._customise_grid(self.ds_y)
 
-            self.ds_y3m = self._customise_grid(self.ds_y3m)
+            self.ds_y3m = (
+                self._customise_grid(self.ds_y3m)
+            )
 
         self.tvars = [
             "month_sin",
@@ -383,13 +389,15 @@ class STDataset(Dataset):
         if self.flag in ["test_star", "test_grid"]:
             x_noscale_ds = self.ds_noscale.sel(time=slice(x_start, x_end))
             x_noscale_ds = x_noscale_ds[["u10", "v10"]]
-            x_ecmwf = torch.tensor(
-                np.array([x_noscale_ds[var].values for var in ["u10", "v10"]]),
-                dtype=torch.float32,
-            )
+            # x_ecmwf = torch.tensor(
+            #     np.array([x_noscale_ds[var].values for var in ["u10", "v10"]]),
+            #     dtype=torch.float32,
+            # )
         y_ds = self.ds_y.sel(time=slice(y_start, y_end))
 
-        y3m_ds = self.ds_y3m.sel(time=slice(y_start, y_end))
+        y3m_ds = (
+            self.ds_y3m.sel(time=slice(y_start, y_end))
+        )
         if self.args.datasrc == 2:
             x_T = x_start + pd.to_timedelta(self.args.T_hr, unit="h")
             x_ds[self.args.vars_dpird].loc[dict(time=slice(x_T, x_end))] = (
@@ -405,18 +413,19 @@ class STDataset(Dataset):
             dtype=torch.float32,
         )  # [n_var,T,lat,lon]
 
-        y3m_4d_ts = torch.tensor(
-            np.array([y3m_ds[var].values for var in ["wind_3m_u", "wind_3m_v"]]),
-            dtype=torch.float32,
+        y3m_4d_ts = (
+            torch.tensor(
+                np.array([y3m_ds[var].values for var in ['wind_3m_u','wind_3m_v']]),
+                dtype=torch.float32,
+            )
+
         )  # [n_var,T,lat,lon]
         y_time = torch.tensor(y_ds["time"].astype(np.float64).values)
 
         # mask the nans
         # y_4dm_ts = torch.where(torch.isnan(y_4d_ts), torch.zeros_like(y_4d_ts), y_4d_ts)
-        if self.flag == "train":
-            return x_4d_ts, y_4d_ts, y_time, y3m_4d_ts
-        elif self.flag in ["test_star", "test_grid"]:
-            return x_4d_ts, y_4d_ts, y_time, x_ecmwf, y3m_4d_ts
+
+        return x_4d_ts, y_4d_ts, y_time, y3m_4d_ts
 
     def _getitem_fnt(self, idx):  # need to modify for dpird and cds set
         x_start, x_end, y_start, y_end = self._get_time(idx)

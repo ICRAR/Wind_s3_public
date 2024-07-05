@@ -24,7 +24,7 @@ parser.add_argument("--mlflow", action="store_true")
 
 parser.add_argument("--backend", type=str, default="nccl")
 parser.add_argument("--init_method", type=str, default="env://")
-parser.add_argument("--customise_grid", action="store_true")
+parser.add_argument("--customise_grid", action="store_true",default=True)
 parser.add_argument(
     "--customise_grid_config",
     nargs="+",
@@ -40,9 +40,9 @@ parser.add_argument("--start_dpird", type=str, default="2022-1-1 00:00:00")
 parser.add_argument(
     "--end", type=str, default="2023-12-31 23:45:00"
 )  # '2023-10-1 00:00:00'
-parser.add_argument("--test_grid_start", type=str, default="2022-1-1 00:00:00")
-parser.add_argument("--test_grid_end", type=str, default="2023-12-31 23:45:00")
-parser.add_argument("--vars_terrain", action="store_true")
+parser.add_argument("--test_grid_start", type=str, default='2022-07-01 00:00:00')
+parser.add_argument("--test_grid_end", type=str, default='2022-08-01 00:00:00')
+parser.add_argument("--vars_terrain", action="store_true",default=True)
 parser.add_argument("--vars_cds", nargs="+", type=str, default=["u10", "v10", "msl"])
 parser.add_argument(
     "--vars_dpird",
@@ -57,8 +57,6 @@ parser.add_argument(
     default=[
         "wind_10m_u",
         "wind_10m_v",
-        "wind_3m_u",
-        "wind_3m_v",
     ],  # wind_10m_u and wind_10m_v must be the first 2 items
 )
 
@@ -82,7 +80,7 @@ parser.add_argument(
     help="0-dpird only, 1-ecmwf only, 2-dpird and ecmwf",
 )
 
-parser.add_argument("--epochs", type=int, default=1)
+parser.add_argument("--epochs", type=int, default=200)
 parser.add_argument("--batch_size", type=int, default=64)  # 32
 parser.add_argument("--learning_rate", type=float, default=0.001)
 parser.add_argument(
@@ -96,21 +94,15 @@ parser.add_argument(
     default="./data_prep_ST/make_grid/stations_available_label_coordinates.csv",
 )
 parser.add_argument(
-    "--cds_src_path",
-    type=str,
-    default="/mnt/science1/fchen/dataset_CDS_2019_2023/combined_p01_2019_2023.nc",
+    "--cds_src_path", type=str, default="/mnt/science1/fchen/dataset_CDS_2019_2023/combined_p01_2019_2023.nc"
 )
 parser.add_argument(
     "--terrain_src_path",
     type=str,
     default="/mnt/science1/fchen/dataset_terrain/dem-9s.tif",
 )
-parser.add_argument(
-    "--dpird_src_path", type=str, default="/mnt/science1/fchen/dataset_DPIRD"
-)
-parser.add_argument(
-    "--st_data_path", type=str, default="/mnt/science1/fchen/dataset_ST/"
-)
+parser.add_argument("--dpird_src_path", type=str, default="/mnt/science1/fchen/dataset_DPIRD")
+parser.add_argument("--st_data_path", type=str, default="/mnt/science1/fchen/dataset_ST/")
 parser.add_argument(
     "--result_path",
     type=str,

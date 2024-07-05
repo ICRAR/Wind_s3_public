@@ -9,25 +9,28 @@ from sklearn.preprocessing import StandardScaler
 
 
 def out_per_df(
-    args, out: np.ndarray, y: np.ndarray, time: np.ndarray, x_ecmwf: np.ndarray
+    args, out: np.ndarray, y: np.ndarray, time: np.ndarray
 ) -> pd.DataFrame:
     # print(y.shape, out.shape, time.shape, x_ecmwf.shape)
     df_list = []
-    time_range = pd.to_datetime(time, unit="ns", utc=True)
+    time_range = pd.to_datetime(time[0], unit="ns").to_numpy()
 
     star_loc = pd.read_csv(args.star_coord_ix)
+    cds = xr.open_dataset(args.test_noscale_path)
+    cds_site = cds.sel(time=time_range)[['u10', 'v10']]
+
     for i, star in star_loc.iterrows():
         label_u = y[0, 0, :, star["lat_ix"], star["lon_ix"]]
         label_v = y[0, 1, :, star["lat_ix"], star["lon_ix"]]
         pred_u = out[0, 0, :, star["lat_ix"], star["lon_ix"]]
         pred_v = out[0, 1, :, star["lat_ix"], star["lon_ix"]]
-        ecmwf_u = x_ecmwf[0, 0, :, star["lat_ix"], star["lon_ix"]]
-        ecmwf_v = x_ecmwf[0, 1, :, star["lat_ix"], star["lon_ix"]]
+        ecmwf_u = cds_site[0, 0, :, star["lat_ix"], star["lon_ix"]]
+        ecmwf_v = cds_site[0, 1, :, star["lat_ix"], star["lon_ix"]]
         length = len(label_u)
         df_i = pd.DataFrame(
             {
-                "time_delta": time_range.values[0],
-                "time": [time_range.values[0, 0]] * length,
+                "time_delta": time_range,
+                "time": [time_range[0]] * length,
                 "site": [star["name"]] * length,
                 "label_u": label_u.tolist(),
                 "label_v": label_v.tolist(),
@@ -41,32 +44,28 @@ def out_per_df(
     df = pd.concat(df_list, ignore_index=True)
     return df
 
-
 def out_per3m_df(
-    args,
-    out: np.ndarray,
-    y: np.ndarray,
-    time: np.ndarray,
-    x_ecmwf: np.ndarray,
-    y3m: np.ndarray,
+        args, out: np.ndarray, y: np.ndarray, time: np.ndarray,
+        y3m: np.ndarray
 ) -> pd.DataFrame:
     # print(y.shape, out.shape, time.shape, x_ecmwf.shape,y3m.shape)
     df_list = []
-    time_range = pd.to_datetime(time, unit="ns", utc=True)
-
+    time_range = pd.to_datetime(time[0], unit="ns").to_numpy()
+    cds = xr.open_dataset(args.test_noscale_path)
+    cds_site = cds.sel(time=time_range)[['u10', 'v10']]
     station3m_loc = pd.read_csv(args.station3m_coord_ix)
     for i, station3m in station3m_loc.iterrows():
         label_u = y3m[0, 0, :, station3m["lat_ix"], station3m["lon_ix"]]
         label_v = y3m[0, 1, :, station3m["lat_ix"], station3m["lon_ix"]]
         pred_u = out[0, 0, :, station3m["lat_ix"], station3m["lon_ix"]]
         pred_v = out[0, 1, :, station3m["lat_ix"], station3m["lon_ix"]]
-        ecmwf_u = x_ecmwf[0, 0, :, station3m["lat_ix"], station3m["lon_ix"]]
-        ecmwf_v = x_ecmwf[0, 1, :, station3m["lat_ix"], station3m["lon_ix"]]
+        ecmwf_u = cds_site['u10'].values[:, station3m["lat_ix"], station3m["lon_ix"]]
+        ecmwf_v = cds_site['v10'].values[:, station3m["lat_ix"], station3m["lon_ix"]]
         length = len(label_u)
         df_i = pd.DataFrame(
             {
-                "time_delta": time_range.values[0],
-                "time": [time_range.values[0, 0]] * length,
+                "time_delta": time_range,
+                "time": [time_range[0]] * length,
                 "site": [station3m["name"]] * length,
                 "label3m_u": label_u.tolist(),
                 "label3m_v": label_v.tolist(),
@@ -79,7 +78,6 @@ def out_per3m_df(
         df_list.append(df_i)
     df = pd.concat(df_list, ignore_index=True)
     return df
-
 
 def out_per_df_S12(y_hat, y, y_time, x_end, scaler) -> pd.DataFrame:
     df = pd.DataFrame()
@@ -123,14 +121,11 @@ def out_per_df_S12_h1m1(y_hat, y, y_time, L, y_mean, y_std) -> pd.DataFrame:
 
 
 def out_ds(
-    args, out: np.ndarray, y: np.ndarray, time: np.ndarray, x_ecmwf: np.ndarray
+    args, out: np.ndarray, y: np.ndarray, time: np.ndarray,
 ) -> xr.Dataset:
     # get the horizon 0 onwards
     n_timeframe = (args.T_hr - args.L_hr) * 4
-    time_to = pd.to_datetime(time[0], unit="ns", utc=True)[n_timeframe - 1 :]
-    length = len(time_to)
-    time_to = pd.to_datetime(time_to, unit="ns", utc=True)
-
+    time_to = pd.to_datetime(time[0], unit="ns")[n_timeframe - 1 :]
     rectgrid_lat = np.linspace(
         args.lat_min, args.lat_max, num=32, endpoint=False, dtype="float64"
     )
@@ -146,12 +141,15 @@ def out_ds(
     # ecmwf_u = np.repeat(x_ecmwf[0, 0, n_timeframe-1:][np.newaxis, ...], length, axis=0)
     # ecmwf_v = np.repeat(x_ecmwf[0, 1, n_timeframe-1:][np.newaxis, ...], length, axis=0)
 
+    cds = xr.open_dataset(args.test_noscale_path)
+    cds_site = cds.sel(time=time_to.to_numpy())[['u10', 'v10']]
+
     label_u = y[0, 0, n_timeframe - 1 :]
     label_v = y[0, 1, n_timeframe - 1 :]
     pred_u = out[0, 0, n_timeframe - 1 :]
     pred_v = out[0, 1, n_timeframe - 1 :]
-    ecmwf_u = x_ecmwf[0, 0, n_timeframe - 1 :]
-    ecmwf_v = x_ecmwf[0, 1, n_timeframe - 1 :]
+    ecmwf_u = cds_site['u10'].values
+    ecmwf_v = cds_site['v10'].values
     ds = xr.Dataset(
         {
             "label_u": (["time_to", "latitude", "longitude"], label_u),
